@@ -1,85 +1,87 @@
 function createInputFIO(element) {
-  // Store original element
+  // сохраняем элемент в ссылку
   const target = element;
 
-  // What input types are allowed without formatting
+  // что игнорируем
   const allowedInputTypes = [
     "deleteContentBackward", // Backspace
     "deleteContentForward", // Delete
-    "deleteByCut", // cutting
-    "deleteWordBackward", // ctrl + backspace
-    "historyUndo", // undo last action (ctrl z)
-    "historyRedo", // redo last action (ctrl y)
+    "deleteByCut", // вырезать
+    "deleteWordBackward", // удалить целое слово (ctrl + backspace)
+    "historyUndo", // отменить последнее действие (ctrl + z)
+    "historyRedo", // повторить последнее действие (ctrl + y)
   ];
 
-  // Format value function
+  // Что блокируем при вводе
   function formatValue(value) {
-    value = value.replace(/[^-\ а-яА-Яё]/g, ""); // remove all symbols except Russian alphabet, dash and space
-    value = value.replace(/\s{2,}/g, " "); // remove double spaces
-    value = value.replace(/\-{2,}/g, "-"); // remove double dashes
-    value = value.trimStart(); // remove space at the beginning
-    value = value.replace(/\-\s+/g, "-"); // remove space after dash
+    value = value.replace(/[^-\ а-яА-Яё]/g, ""); // запретить все символы кроме кириллицы, тире и пробела
+    value = value.replace(/\s{2,}/g, " "); // заменяет два пробела подряд на один
+    value = value.replace(/\-{2,}/g, "-"); // заменяет два тире подряд на один
+    value = value.trimStart(); // запрет пробела в начале
+    value = value.replace(/\-\s+/g, "-"); // убирает пробел после тире на конце
     return value;
   }
 
-  // Input handler function
-  function handleInput(event) {
-    // Check if input type is allowed
-    if (allowedInputTypes.includes(event.inputType)) {
-      return;
-    }
+  function parse(event) {
+    const target = event.target;
+    const formattedValue = formatValue(target.value);
 
-    // Get cursor position and value
-    const cursor = target.selectionStart;
-    let value = target.value;
-
-    // Parse and format the value
-    value = formatValue(value);
-    const words = value.split(" "); // split into words by spaces
+    var words = formattedValue.split(" "); // каждый раз делим на слова по пробелам
     let parseResult = "";
 
     words.forEach(function (word, idx) {
-      // Word doesn't start with dash
+      // слово не начинается с тире
       if (word[0] === "-") {
         return;
       }
 
-      // If not the first word, add space
+      // если слово не первое, добавляем пробел
       if (idx > 0) {
-        parseResult += " " + word.charAt(0).toUpperCase();
-      } else {
-        parseResult += word.charAt(0).toUpperCase();
+        parseResult += " ";
       }
 
-      // Add the rest of the word in lowercase
-      parseResult += word.slice(1).toLowerCase();
+      // первая буква каждого слова в верхнем регистре
+      parseResult += word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     });
 
-    // Update value and restore cursor position
-    target.value = parseResult;
-    target.selectionStart = cursor;
-    target.selectionEnd = cursor;
+    if (target.value !== parseResult) {
+      target.value = parseResult;
+    }
 
-    // Prevent default behavior
+    return parseResult;
+  }
+
+  function updateCursor(event) {
+    const target = event.target;
+
+    // положение курсора всегда будет равно длине ввода(value) инпута
+    target.selectionStart = target.value.length;
+    target.selectionEnd = target.value.length;
+  }
+
+  function handleInput(event) {
+    // Проверяем что игнорируем
+    if (allowedInputTypes.includes(event.inputType)) {
+      updateCursor(event);
+      return;
+    }
+
+    parse(event);
+
     event.preventDefault();
     event.stopPropagation();
   }
 
-  // Add event listener
   target.addEventListener("input", handleInput);
 
-  // Return object with destroy method
+  // Метод для уничтожения обработчика
   return {
     destroy: function () {
       target.removeEventListener("input", handleInput);
     },
   };
 }
-// Usage example:
-// const inputElement = document.getElementById('myInput');
-// const inputFIO = createInputFIO(inputElement);
-//
-// To destroy:
+// Как уничтожить:
 // inputFIO.destroy();
 
 const inputs = document.querySelectorAll(".test__input");
