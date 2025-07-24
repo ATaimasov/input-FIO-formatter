@@ -1,4 +1,37 @@
-function createInputFIO(element) {
+const form = document.querySelector(".test__form");
+const inputs = form.querySelectorAll(".test__input[type='text']");
+
+inputs.forEach(function (input) {
+  preValidateFIO(input);
+});
+
+form.addEventListener("submit", function (event) {
+  event.preventDefault();
+
+  let err = "";
+  for (let i = 0; i < inputs.length; i++) {
+    inputs[i].value = inputs[i].value.trim();
+
+    const validate = validateFIO(inputs[i].value);
+    if (!validate) {
+      err += inputs[i].placeholder + " ";
+      continue;
+    }
+  }
+
+  if (err) {
+    alert("Введено неправильно: " + err);
+  } else {
+    alert("Данные введены правильно!");
+  }
+});
+
+/**
+ * Валидация ФИО на уровне ввода
+ * @param {Object} element
+ * @returns
+ */
+function preValidateFIO(element) {
   // сохраняем элемент в ссылку
   const target = element;
 
@@ -100,8 +133,71 @@ function createInputFIO(element) {
 // Как уничтожить:
 // inputFIO.destroy();
 
-const inputs = document.querySelectorAll(".test__input");
+/**
+ * Проверка ФИО (checkFIOpartNew в java)
+ * В соответствии с приказом ФНС:  https://www.consultant.ru/document/cons_doc_LAW_410788/763145d8bce1267a0501117c28ebd122104c1b8e/
+ * @param s - строка
+ * @return boolean
+ */
+function validateFIO(s) {
+  if (s === null || s.trim() === "") {
+    return false;
+  }
 
-inputs.forEach(function (input) {
-  createInputFIO(input);
-});
+  // Предварительные проверки
+  if (
+    s.endsWith(" .") || // заканчивается пробел+точка
+    s.endsWith("(") || // заканчивается открывающей скобкой
+    s.includes("  ") || // два пробела подряд
+    s.includes("--") || // два дефиса подряд
+    s.includes("''") || // два апострофа подряд
+    s.includes(" .") || // пробел перед точкой
+    s.includes("- ") || // пробел после дефиса
+    s.includes(" -")
+  ) {
+    return false;
+  }
+
+  // Основная проверка
+
+  const russianLetters = "А-ЯЁа-яё";
+  const romanNumerals = "IV";
+
+  const pattern =
+    "^[" +
+    russianLetters +
+    "]+" +
+    "(" + // Пробел + НЕ пробел
+    "\\s[" +
+    russianLetters +
+    romanNumerals +
+    "\\(\\)\\.]+" +
+    "|" +
+    // Дефис + НЕ дефис
+    "-[" +
+    russianLetters +
+    romanNumerals +
+    "\\(\\)\\s\\.]+" +
+    "|" +
+    // Апостроф + НЕ апостроф
+    "'[" +
+    russianLetters +
+    romanNumerals +
+    "\\(\\)\\s\\.]+" +
+    "|" +
+    // Запятая + пробел + буквы (запятая всегда с пробелом)
+    "\\,\\s[" +
+    russianLetters +
+    romanNumerals +
+    "\\(\\)\\.]+" +
+    "|" +
+    // Скобки и точки + любые разрешенные символы
+    "[\\(\\)\\.][" +
+    russianLetters +
+    romanNumerals +
+    "\\(\\)\\s\\.]+" +
+    ")*$";
+
+  const regex = new RegExp(pattern);
+  return regex.test(s);
+}
